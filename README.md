@@ -50,112 +50,113 @@ VPS：
 
 ## 工作流详解
 
-- ### 定时任务触发器
-  新建一个 **Schedule Trigger**
-  |Trigger Rules|Value|
-  |--|--|
-  |Trigger Interval|Days|
-  |Days Between Triggers|1|
-  |Trigger at Hour|8am|
+### 1. 定时任务触发器
+新建一个 **Schedule Trigger**
+|Trigger Rules|Value|
+|--|--|
+|Trigger Interval|Days|
+|Days Between Triggers|1|
+|Trigger at Hour|8am|
 
-- ### RSS数据收集
-  从 **Schedule Trigger** 上链接出一个 **RSS Read**, 用于获取科技站点 **theverge** 的信息
-  |Parameters|Value|
-  |--|--|
-  |URL|https://www.theverge.com/rss/index.xml|
+### 2. RSS数据收集
+从 **Schedule Trigger** 上链接出一个 **RSS Read**, 用于获取科技站点 **theverge** 的信息
+|Parameters|Value|
+|--|--|
+|URL|https://www.theverge.com/rss/index.xml|
 
-- ### Twitter/X数据收集
-  由于 twitter 开发者账号比较昂贵，我们可以使用第三方的 API 来获取一些 X 上的科技KOL的每日推文<br />
-  在开始获取之前，我们需要先创建一个 List 来设置需要追踪的 KOL 账号<br />
-  - 从 **Schedule Trigger** 上增加一个 **Code** 节点，我们直接以 JS 的方式来输出想要的列表
-    |Parameters|Value|
-    |--|--|
-    |Mode|Run Once for All Items|
-    |Language|Javascript|
-    ```javascript
-    let twitterUserList = [
-      {userName: "msjiaozhu"},
-      {userName: "aigclink"},
-      {userName: "alibaba_qwen"},
-      {userName: "imxiaohu"},
-      {userName: "karminski3"},
-      {userName: "googlelabs"},
-      {userName: "geekbb"},
-      {userName: "realmrfakename"},
-      {userName: "op7418"},
-      {userName: "dotey"},
-    ]
+### 3. Twitter/X数据收集
+由于 twitter 开发者账号比较昂贵，我们可以使用第三方的 API 来获取一些 X 上的科技KOL的每日推文<br />
+在开始获取之前，我们需要先创建一个 List 来设置需要追踪的 KOL 账号<br />
+#### 3.1 从 **Schedule Trigger** 上增加一个 **Code** 节点，我们直接以 JS 的方式来输出想要的列表
+|Parameters|Value|
+|--|--|
+|Mode|Run Once for All Items|
+|Language|Javascript|
+```javascript
+let twitterUserList = [
+  {userName: "msjiaozhu"},
+  {userName: "aigclink"},
+  {userName: "alibaba_qwen"},
+  {userName: "imxiaohu"},
+  {userName: "karminski3"},
+  {userName: "googlelabs"},
+  {userName: "geekbb"},
+  {userName: "realmrfakename"},
+  {userName: "op7418"},
+  {userName: "dotey"},
+]
 
-    return twitterUserList
-    ```
-  
-  - 从上面的 **Code** 在连出一个 **HTTP Request** 节点
-    |Parameters|Value|
-    |--|--|
-    |Method|GET|
-    |URL|https://api.twitterapi.io/twitter/user/last_tweets?userName={{ $json.userName }}|
-    |Authentication|Generic Credential Type|
-    |Generic Auth Type|Header Auth|
-    |Header Auth|**twitterapi.io Auth**|
+return twitterUserList
+```
 
-    这里你需要注册一个 [twitterapi.io](https://twitterapi.io/) 的账号，获取到 API Key 之后创建一个名为 **twitterapi.io Auth** 的Header Auth<br />
-    另外，为了避免触发 QPS Limits, 可以在 **HTTP Request** 的 Options 里面添加 Batching，设置为10秒间隔：
-    |Batching Option|Value|
-    |--|--|
-    |Items per Batch|1|
-    |Batch Interval (ms)|10000|
+#### 3.2 从上面的 **Code** 在连出一个 **HTTP Request** 节点
+|Parameters|Value|
+|--|--|
+|Method|GET|
+|URL|https://api.twitterapi.io/twitter/user/last_tweets?userName={{ $json.userName }}|
+|Authentication|Generic Credential Type|
+|Generic Auth Type|Header Auth|
+|Header Auth|**twitterapi.io Auth**|
 
-  - 过滤最新24小时的推文
-    由于 **twitterapi.io** 的 API 并不支持时间维度的查询，只能查询最新的20条推文，因为我们还需要过滤一下，只获取此时间点24小时之内的推文<br />
-    在上面的 **HTTP Request** 后连一个 **Code** 节点
-    |Parameters|Value|
-    |--|--|
-    |Mode|Run Once for All Items|
-    |Language|Javascript|
-    ```javascript
-    function getData(){
-      let now = Date.now();
-      let oneDay = 86400000;
-      let allRequests = $input.all()
-      // @ts-ignore
-      let filterTweets = [];
-      if(allRequests?.length > 0){
+这里你需要注册一个 [twitterapi.io](https://twitterapi.io/) 的账号，获取到 API Key 之后创建一个名为 **twitterapi.io Auth** 的Header Auth<br />
+另外，为了避免触发 QPS Limits, 可以在 **HTTP Request** 的 Options 里面添加 Batching，设置为10秒间隔：
+|Batching Option|Value|
+|--|--|
+|Items per Batch|1|
+|Batch Interval (ms)|10000|
 
-        allRequests.forEach(request=>{
-          let tweets = request?.json?.data?.tweets;
-          if(tweets?.length > 0){
-            for (const item of tweets) {
-              // @ts-ignore
-              const { createdAt, url, text, quoted_tweet, extendedEntities, author } = item || {}
-              // @ts-ignore
-              let media = []
-              if(extendedEntities?.media?.length > 0){
-                extendedEntities.media.forEach(mediaItem=>{
-                  media.push({
-                    mediaUrl: mediaItem?.media_url_https || null
-                  })
-                })
-              }
-              const authorName = author?.name || author?.userName || ''
-              let createdAtTime = new Date(createdAt).getTime() || 0
-              if(createdAtTime + oneDay > now){
-                filterTweets.push({
-                  author: authorName,
-                  createdAt: createdAt,
-                  url: url,
-                  fullText: text + (quoted_tweet?.text ? "\nquoted_tweet:\n" + quoted_tweet.text : ""),
-                  media: media,
-                })
-              }
-            }
+#### 3.3 过滤最新24小时的推文
+由于 **twitterapi.io** 的 API 并不支持时间维度的查询，只能查询最新的20条推文，因为我们还需要过滤一下，只获取此时间点24小时之内的推文<br />
+在上面的 **HTTP Request** 后连一个 **Code** 节点
+|Parameters|Value|
+|--|--|
+|Mode|Run Once for All Items|
+|Language|Javascript|
+```javascript
+function getData(){
+  let now = Date.now();
+  let oneDay = 86400000;
+  let allRequests = $input.all()
+  // @ts-ignore
+  let filterTweets = [];
+  if(allRequests?.length > 0){
+
+    allRequests.forEach(request=>{
+      let tweets = request?.json?.data?.tweets;
+      if(tweets?.length > 0){
+        for (const item of tweets) {
+          // @ts-ignore
+          const { createdAt, url, text, quoted_tweet, extendedEntities, author } = item || {}
+          // @ts-ignore
+          let media = []
+          if(extendedEntities?.media?.length > 0){
+            extendedEntities.media.forEach(mediaItem=>{
+              media.push({
+                mediaUrl: mediaItem?.media_url_https || null
+              })
+            })
           }
-        })
+          const authorName = author?.name || author?.userName || ''
+          let createdAtTime = new Date(createdAt).getTime() || 0
+          if(createdAtTime + oneDay > now){
+            filterTweets.push({
+              author: authorName,
+              createdAt: createdAt,
+              url: url,
+              fullText: text + (quoted_tweet?.text ? "\nquoted_tweet:\n" + quoted_tweet.text : ""),
+              media: media,
+            })
+          }
+        }
       }
-      return filterTweets
-    }
+    })
+  }
+  return filterTweets
+}
 
-    return getData()
-    ```
+return getData()
+```
+
 
 ### 1. 定时任务触发器 (Cron)
 
