@@ -210,9 +210,6 @@ return getData()
 |--|--|
 |Method|GET|
 |URL|*替换为你自己的 worker url*|
-|Authentication|Generic Credential Type|
-|Generic Auth Type|Header Auth|
-|Header Auth|**twitterapi.io Auth**|
 
 #### 4.3 Format HuggingFace Daily Papers
 在上面的 **HTTP Request** 后连一个 **Code** 节点
