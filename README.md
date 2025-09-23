@@ -59,10 +59,43 @@ VPS：
 |Trigger at Hour|8am|
 
 ### 2. RSS数据收集
+#### 2.1 **theverge RSS** 
 从 **Schedule Trigger** 上链接出一个 **RSS Read**, 用于获取科技站点 **theverge** 的信息
 |Parameters|Value|
 |--|--|
 |URL|https://www.theverge.com/rss/index.xml|
+
+#### 2.2 **RSS Format**
+在获取到数据之后，还需要 Format 以便稍后组合3个不同的数据源<br />
+从上一个节点上增加一个 **Code** 节点，用 JS 进行format
+|Parameters|Value|
+|--|--|
+|Mode|Run Once for All Items|
+|Language|Javascript|
+<details>
+<summary><b>Format Theverge Code</b></summary>
+
+```javascript
+let filterItems = [], now = Date.now()
+for (const item of $input.all()) {
+  const { pubDate, contentSnippet, link, author } = item.json
+  if(pubDate){
+    const pubTime = new Date(pubDate).getTime() || 0
+    if(pubTime+86400000 > now){
+      filterItems.push({
+        author,
+        fullText: contentSnippet,
+        createdAt: pubDate,
+        url: link,
+        media: []
+      })
+    }
+    
+  }
+}
+return filterItems;
+```
+</details>
 
 ### 3. Twitter/X数据收集
 由于 twitter 开发者账号比较昂贵，我们可以使用第三方的 API 来获取一些 X 上的科技KOL的每日推文<br />
@@ -72,6 +105,9 @@ VPS：
 |--|--|
 |Mode|Run Once for All Items|
 |Language|Javascript|
+<details>
+<summary><b>Get Twitter User List Code</b></summary>
+
 ```javascript
 let twitterUserList = [
   {userName: "msjiaozhu"},
@@ -88,6 +124,7 @@ let twitterUserList = [
 
 return twitterUserList
 ```
+</details>
 
 #### 3.2 从上面的 **Code** 在连出一个 **HTTP Request** 节点
 |Parameters|Value|
@@ -112,6 +149,9 @@ return twitterUserList
 |--|--|
 |Mode|Run Once for All Items|
 |Language|Javascript|
+<details>
+<summary><b>Filter Twitter Posts Code</b></summary>
+
 ```javascript
 function getData(){
   let now = Date.now();
@@ -156,6 +196,70 @@ function getData(){
 
 return getData()
 ```
+</details>
+
+### 4. HuggingFace Daily Paper
+**Huggingface Daily Papers** 是一个由 [AK](https://x.com/_akhaliq) 和研究社区精选的每日热门AI研究论文合集，但只有网页版，不支持 RSS，如果想要变成文本和结构化的数据，需要自己处理<br />
+#### 4.1 Tech-Feed 部署
+[Tech-Feed](/projects/tech-feed/)是一个基于 **Cloudflare** HTMLRewriter 的 wroker，可以直接读取 HuggingFace Daily Papers 页面上的 html 节点，并且对其进行格式化处理<br />
+参照此项目的说明部署至 Cloudflare 即可，部署完毕之后你会获得一个访问 URL，也可以配置自己的域名进行访问。
+
+#### 4.2 Request for HuggingFace Daily Papers
+在获取到上一步的 URL 之后，从**Schedule Trigger** 上增加一个 **HTTP Request** 节点
+|Parameters|Value|
+|--|--|
+|Method|GET|
+|URL|*替换为你自己的 worker url*|
+|Authentication|Generic Credential Type|
+|Generic Auth Type|Header Auth|
+|Header Auth|**twitterapi.io Auth**|
+
+#### 4.3 Format HuggingFace Daily Papers
+在上面的 **HTTP Request** 后连一个 **Code** 节点
+|Parameters|Value|
+|--|--|
+|Mode|Run Once for All Items|
+|Language|Javascript|
+<details>
+<summary><b>Format HuggingFace Papers Code</b></summary>
+
+```javascript
+function formatHuggingfacePapers () {
+  let theItems = []
+  try{
+    // @ts-ignore
+    let items = $input.all()
+
+    for(let i=0, l= items.length;i<l;i++ ){
+      if(i<5){
+        let item = items[i]
+        theItems.push({
+          // @ts-ignore
+          author: item.json.author,
+          url: item.json.url,
+          fullText: item.json.abstract,
+          createdAt: item.json.date_published,
+          media: []
+        })
+      }
+    }
+    return theItems
+  }catch{
+    return []
+  }
+}
+
+return formatHuggingfacePapers()
+```
+
+
+
+
+
+
+
+---
+
 
 
 ### 1. 定时任务触发器 (Cron)
