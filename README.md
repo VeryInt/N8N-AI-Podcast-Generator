@@ -7,8 +7,8 @@
 ## 前置条件
 - VPS（可选）：[1vCPU / 1GB RAM / 60GB Disk / 年付$10.99](https://app.cloudcone.com/vps/405/create?ref=329&token=flash-q3-25-vps-1)
 - 域名（可选）
-- Cloudflare 账号（用于 Workers、R2、D1）
-- 硅基流动账号（用于 文本模型 和 TTS 模型调用）
+- [Cloudflare](https://cloudflare.com/) 账号（用于 Workers、R2、D1）
+- [硅基流动](https://cloud.siliconflow.cn/i/qMPDxY41)账号（用于 文本模型 和 TTS 模型调用）
 
 ## 安装说明
 ### n8n
@@ -63,11 +63,11 @@ n8n 原生支持 cron 定时触发，适合每日资讯类自动化任务。
 
 ### 获取数据
 数据主要来自三类来源：
-1. 国外科技媒体 RSS<br />
+1. **国外科技媒体 RSS**<br />
 [The Verge RSS](https://www.theverge.com/rss/index.xml)
-2. Hugging Face Daily Trending / Daily Papers<br />
+2. **Hugging Face Daily Trending / Daily Papers**<br />
 Hugging Face Daily Papers 由 [AK](https://x.com/_akhaliq) 与研究社区精选，每日汇总热门 AI 论文。其为网页形式，不直接提供 RSS。Tech-Push 中的[HuggingFace路由实现](https://github.com/VeryInt/N8N-AI-Podcast-Generator/blob/main/projects/tech-push/src/worker/huggingface/routes.ts) 基于 Cloudflare HTMLRewriter，可直接解析页面节点并结构化输出。按说明部署至 Cloudflare 后，你将获得可访问的 URL（也可绑定自定义域名）。
-3. X（原 Twitter）科技推文<br />
+3. **X（原 Twitter）科技推文**<br />
 请注册 [twitterapi.io](https://twitterapi.io/) 并获取 API Key，在 n8n 中创建名为 `twitterapi.io Auth` 的 Header Auth。为避免触发 QPS 限制，可在 HTTP Request 节点的 Options 中启用 Batching，并设置 10 秒间隔。
 
 <img src="/assets/images/input_list.PNG" />
