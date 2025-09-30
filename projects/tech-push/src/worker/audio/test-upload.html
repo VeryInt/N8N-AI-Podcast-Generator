@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频文件上传测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            border: 2px dashed #ddd;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+        .upload-section:hover {
+            border-color: #007bff;
+        }
+        .file-input {
+            display: none;
+        }
+        .upload-btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        .upload-btn:hover {
+            background: #0056b3;
+        }
+        .upload-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .filename-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #28a745;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .file-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: none;
+        }
+        .status-section {
+            margin-top: 30px;
+        }
+        .status-btn {
+            background: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .status-btn:hover {
+            background: #545b62;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 音频文件上传服务</h1>
+        
+        <div class="upload-section">
+            <h3>选择音频文件</h3>
+            <p>支持格式: MP3, WAV, OGG, AAC, M4A (最大50MB)</p>
+            
+            <input type="file" id="audioFile" class="file-input" accept="audio/*">
+            <button class="upload-btn" onclick="document.getElementById('audioFile').click()">
+                选择文件
+            </button>
+            
+            <div class="file-info" id="fileInfo">
+                <strong>已选择文件:</strong> <span id="fileName"></span><br>
+                <strong>文件大小:</strong> <span id="fileSize"></span><br>
+                <strong>文件类型:</strong> <span id="fileType"></span>
+            </div>
+            
+            <div>
+                <input type="text" id="customFilename" class="filename-input" 
+                       placeholder="自定义文件名 (可选，留空使用原文件名)">
+            </div>
+            
+            <button class="upload-btn" id="uploadBtn" onclick="uploadFile()" disabled>
+                上传文件
+            </button>
+            
+            <div class="progress" id="progressContainer" style="display: none;">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+        
+        <div class="result" id="result"></div>
+        
+        <div class="status-section">
+            <h3>服务状态</h3>
+            <button class="status-btn" onclick="checkStatus()">检查服务状态</button>
+            <button class="status-btn" onclick="listTodayFiles()">查看今日文件</button>
+            <div id="statusResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/audio';
+        
+        // 文件选择处理
+        document.getElementById('audioFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileSize').textContent = formatFileSize(file.size);
+                document.getElementById('fileType').textContent = file.type;
+                document.getElementById('fileInfo').style.display = 'block';
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        });
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 上传文件
+        async function uploadFile() {
+            const fileInput = document.getElementById('audioFile');
+            const customFilename = document.getElementById('customFilename').value;
+            const uploadBtn = document.getElementById('uploadBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const result = document.getElementById('result');
+            
+            if (!fileInput.files[0]) {
+                showResult('请先选择文件', false);
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            if (customFilename) {
+                formData.append('filename', customFilename);
+            }
+            
+            uploadBtn.disabled = true;
+            progressContainer.style.display = 'block';
+            result.style.display = 'none';
+            
+            try {
+                // 模拟上传进度
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 20;
+                    if (progress > 90) progress = 90;
+                    progressBar.style.width = progress + '%';
+                }, 200);
+                
+                const response = await fetch(`${API_BASE}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult(`
+                        <strong>上传成功!</strong><br>
+                        文件路径: ${data.path}<br>
+                        访问URL: <a href="${data.url}" target="_blank">${data.url}</a>
+                    `, true);
+                    
+                    // 清空表单
+                    fileInput.value = '';
+                    document.getElementById('customFilename').value = '';
+                    document.getElementById('fileInfo').style.display = 'none';
+                } else {
+                    showResult(`上传失败: ${data.error}`, false);
+                }
+                
+            } catch (error) {
+                showResult(`上传失败: ${error.message}`, false);
+            } finally {
+                uploadBtn.disabled = false;
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
+                }, 1000);
+            }
+        }
+        
+        // 显示结果
+        function showResult(message, isSuccess) {
+            const result = document.getElementById('result');
+            result.innerHTML = message;
+            result.className = `result ${isSuccess ? 'success' : 'error'}`;
+            result.style.display = 'block';
+        }
+        
+        // 检查服务状态
+        async function checkStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/status`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('statusResult').innerHTML = `
+                        <div class="result success">
+                            <strong>服务状态:</strong> ${data.status}<br>
+                            <strong>今日文件数:</strong> ${data.today.fileCount}<br>
+                            <strong>今日日期:</strong> ${data.today.date}
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('statusResult').innerHTML = `
+                        <div class="result error">
+                            获取状态失败: ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('statusResult').innerHTML = `
+                    <div class="result error">
+                        请求失败: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // 列出今日文件
+        async function listTodayFiles() {
+            try {
+                const today = new Date();
+                const year = today.getFullYear();
+                const monthDay = String(today.getMonth() + 1).padStart(2, '0') + String(today.getDate()).padStart(2, '0');
+                
+                const response = await fetch(`${API_BASE}/files/${year}/${monthDay}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    let filesHtml = '<div class="result success"><strong>今日文件列表:</strong><br>';
+                    if (data.files && data.files.length > 0) {
+                        data.files.forEach(file => {
+                            filesHtml += `
+                                <div style="margin: 5px 0; padding: 5px; background: #e9ecef; border-radius: 3px;">
+                                    文件: ${file.key}<br>
+                                    大小: ${formatFileSize(file.size)}<br>
+                                    上传时间: ${new Date(file.uploaded).toLocaleString()}
+                                </div>
+                            `;
+                        });
+                    } else {
+                        filesHtml += '<p>今日暂无文件</p>';
+                    }
+                    filesHtml += '</div>';
+                    document.getElementById('statusResult').innerHTML = filesHtml;
+                } else {
+                    document.getElementById('statusResult').innerHTML = `
+                        <div class="result error">
+                            获取文件列表失败: ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('statusResult').innerHTML = `
+                    <div class="result error">
+                        请求失败: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // 页面加载时检查状态
+        window.addEventListener('load', checkStatus);
+    </script>
+</body>
+</html> 

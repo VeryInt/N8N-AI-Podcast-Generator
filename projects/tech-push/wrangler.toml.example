@@ -1,0 +1,72 @@
+# wrangler.toml
+
+# $schema 字段在 TOML 中不直接使用，它通常用于 JSON 文件中提供 IDE 的自动补全和验证。
+# 在 TOML 中，你可以通过 IDE 插件（如 VS Code 的 "Better TOML"）获得类似支持，
+# 但不需要在文件中显式声明 schema。
+
+# Worker 的名称，用于 Cloudflare Dashboard 和 CLI 命令中识别你的 Worker。
+name = "tech-push"
+
+# Worker 的入口文件。指定你的 Worker 代码的路径。
+# 对于 TypeScript 项目，这通常是编译后的 JavaScript 文件，但 Wrangler 会自动处理。
+main = "./src/worker/index.ts"
+
+# 兼容性日期。这是 Cloudflare Workers 平台的一个重要特性，
+# 用于指定你的 Worker 兼容的最低平台版本。
+# 新的兼容性日期会启用新的行为和功能，同时可能弃用旧的行为。
+# 建议使用未来的日期，以便在部署前提前了解并适应潜在的更改。
+compatibility_date = "2025-04-01"
+
+# 兼容性标志。用于启用特定的运行时功能或行为。
+# "nodejs_compat" 标志启用了 Node.js 兼容层，允许 Worker 使用一些 Node.js 内置模块。
+compatibility_flags = [
+  "nodejs_compat"
+]
+
+# 可观测性配置。用于启用 Worker 的日志和跟踪功能。
+[observability]
+# 设置为 true 以启用 Worker 的可观测性功能，如日志和跟踪。
+enabled = true
+# 注意：upload_source_maps 也是可观测性的一部分，但通常在根级别配置。
+
+# 是否上传 Source Map。在开发和调试时非常有用，可以将编译后的代码映射回原始的 TypeScript/JavaScript。
+# 有助于在 Cloudflare Dashboard 中查看堆栈跟踪时，显示原始文件和行号。
+upload_source_maps = true
+
+# 静态资产配置。用于指定 Worker 提供的静态文件目录。
+# 这些文件将通过 Cloudflare Pages 或 Worker 的资产服务进行托管。
+[assets]
+# 静态文件所在的目录路径。
+directory = "./dist/client"
+
+# R2 存储桶配置。用于将 Worker 与 Cloudflare R2 存储桶绑定。
+# Worker 可以通过绑定的名称访问 R2 桶。
+# 可以配置多个 R2 桶。
+[[r2_buckets]]
+# Worker 代码中用于访问此 R2 桶的变量名（例如 env.INSIGHTCAST_BUCKET）。
+binding = "<R2_BUCKET_BINDING_NAME>"
+# 实际的 R2 桶名称。建议使用环境变量来管理不同环境的桶名称。
+bucket_name = "<YOUR_R2_BUCKET_NAME>"
+preview_bucket_name = "<YOUR_R2_BUCKET_NAME_PREVIEW>"
+# 示例：bucket_name = "${R2_BUCKET_NAME}" # 使用环境变量
+
+# D1 数据库配置。用于将 Worker 与 Cloudflare D1 数据库绑定。
+# Worker 可以通过绑定的名称访问 D1 数据库。
+# 可以配置多个 D1 数据库。
+[[d1_databases]]
+# Worker 代码中用于访问此 D1 数据库的变量名（例如 env.PODCAST_DB）。
+binding = "PODCAST_DB"
+# D1 数据库的名称。
+database_name = "<YOUR_D1_DATABASE_NAME>"
+# D1 数据库的 ID。这是 Cloudflare 内部用于唯一标识数据库的 ID。
+# 强烈建议使用环境变量来管理生产和预览环境的数据库 ID。
+database_id = "<YOUR_D1_DATABASE_ID>"
+preview_database_id = "<YOUR_D1_DATABASE_ID_PREVIEW>"
+# 示例：preview_database_id = "<YOUR_D1_PREVIEW_DATABASE_ID>" # 预览环境的数据库 ID
+
+# 环境变量。这些变量将在 Worker 运行时注入到 env 对象中。
+# 可以在 Worker 代码中通过 env.VARIABLE_NAME 访问。
+[vars]
+# R2 桶的基础 URL。这通常是你的 R2 桶的公共 URL，用于构建静态资产的完整路径。
+# 建议使用环境变量来管理不同环境的基础 URL。
+R2_BASE_URL = "<YOUR_R2_BASE_URL>"

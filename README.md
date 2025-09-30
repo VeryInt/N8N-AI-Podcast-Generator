@@ -248,7 +248,7 @@ function formatHuggingfacePapers () {
 
 return formatHuggingfacePapers()
 ```
-
+</details>
 
 
 
