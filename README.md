@@ -5,10 +5,10 @@
 这是一个利用 **n8n** 和 **Cloudflare** 搭建的 **AI 播客自动化工作流**。它通过 **AI** 整合信息并使用 TTS 技术生成音频，实现播客内容的自动生成与发布。
 
 ## 前置条件
-- VPS(可选) 1vCPU,1 024MB RAM, 60GBs DISK, Los Angeles, $10.99/YR
+- VPS(可选) [1vCPU,1 024MB RAM, 60GBs DISK, Los Angeles, $10.99/YR](https://app.cloudcone.com/vps/405/create?ref=329&token=flash-q3-25-vps-1)
 - 域名(可选)
-- cloudflare账号
-- 硅基流动账号
+- [cloudflare](https://cloudflare.com/)账号
+- [硅基流动](https://cloud.siliconflow.cn/i/qMPDxY41)账号
 
 ## 安装说明
 ### n8n
@@ -20,6 +20,7 @@
 |性能更好|持久开机|
 |安装便捷|定时任务|
 |无需付费|随时随地访问/操作|
+
 另外n8n相比dify的一个最明显的好处，n8n支持cron也就是定时任务自动触发。
 
 #### 导入workflow
